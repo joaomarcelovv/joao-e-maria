@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Um presente para nossa história</title>
+<style>
+  :root{
+    --olive:#66705a;
+    --olive-dark:#4f5945;
+    --cream:#f7f4ed;
+    --white:#fff;
+    --text:#3f433b;
+    --muted:#777a70;
+    --line:#dedbd2;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:var(--cream);
+    color:var(--text);
+    font-family:Georgia, "Times New Roman", serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .card{
+    width:min(520px,100%);
+    background:var(--white);
+    border-radius:22px;
+    padding:34px 28px 30px;
+    box-shadow:0 12px 40px rgba(60,65,55,.10);
+    text-align:center;
+  }
+  .eyebrow{
+    color:var(--olive);
+    letter-spacing:2px;
+    text-transform:uppercase;
+    font-size:12px;
+    margin-bottom:12px;
+  }
+  h1{
+    margin:0 0 12px;
+    font-size:32px;
+    font-weight:500;
+  }
+  .intro{
+    font-size:17px;
+    line-height:1.6;
+    margin:0 auto 25px;
+    max-width:430px;
+  }
+  label{
+    display:block;
+    text-align:left;
+    font-family:Arial,sans-serif;
+    font-size:13px;
+    font-weight:600;
+    margin:0 0 7px;
+  }
+  .value-wrap{
+    display:flex;
+    align-items:center;
+    border:1px solid var(--line);
+    border-radius:13px;
+    padding:0 15px;
+    margin-bottom:14px;
+    background:#fcfbf8;
+  }
+  .prefix{
+    font-family:Arial,sans-serif;
+    color:var(--muted);
+    font-size:18px;
+    margin-right:8px;
+  }
+  input{
+    width:100%;
+    border:0;
+    outline:0;
+    background:transparent;
+    padding:15px 0;
+    font-size:22px;
+    color:var(--text);
+    font-family:Arial,sans-serif;
+  }
+  button{
+    width:100%;
+    border:0;
+    border-radius:13px;
+    padding:15px 18px;
+    background:var(--olive);
+    color:white;
+    font-size:15px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  button:hover{background:var(--olive-dark)}
+  .result{
+    display:none;
+    margin-top:25px;
+    border-top:1px solid var(--line);
+    padding-top:24px;
+  }
+  .result h2{
+    font-size:23px;
+    font-weight:500;
+    margin:0 0 6px;
+  }
+  .amount{
+    font-family:Arial,sans-serif;
+    font-weight:700;
+    font-size:18px;
+    margin-bottom:18px;
+  }
+  textarea{
+    width:100%;
+    min-height:125px;
+    resize:none;
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:13px;
+    font-family:monospace;
+    font-size:12px;
+    color:#555;
+    background:#faf9f6;
+  }
+  .copy{
+    margin-top:10px;
+  }
+  .note{
+    font-family:Arial,sans-serif;
+    color:var(--muted);
+    font-size:12px;
+    line-height:1.5;
+    margin:16px auto 0;
+    max-width:390px;
+  }
+  .success{
+    display:none;
+    color:var(--olive-dark);
+    font-family:Arial,sans-serif;
+    font-size:13px;
+    margin-top:9px;
+  }
+  .footer{
+    margin-top:25px;
+    font-size:13px;
+    color:var(--muted);
+  }
+</style>
+</head>
+<body>
+<main class="card">
+  <div class="eyebrow">João &amp; [NOME DA NOIVA]</div>
+  <h1>Um presente para nossa história</h1>
+  <p class="intro">
+    Sua presença já é um presente para nós. Mas, se quiser contribuir
+    com essa nova fase, escolha livremente o valor que deseja nos presentear.
+  </p>
+
+  <label for="valor">Quanto você gostaria de contribuir?</label>
+  <div class="value-wrap">
+    <span class="prefix">R$</span>
+    <input id="valor" inputmode="decimal" placeholder="0,00" aria-label="Valor da contribuição">
+  </div>
+
+  <button id="gerar">Gerar Pix</button>
+
+  <section class="result" id="resultado">
+    <h2>Seu Pix está pronto ❤️</h2>
+    <div class="amount" id="valorFinal"></div>
+    <textarea id="pix" readonly></textarea>
+    <button class="copy" id="copiar">Copiar Pix Copia e Cola</button>
+    <div class="success" id="sucesso">Código copiado!</div>
+    <p class="note">
+      Agora é só abrir o aplicativo do seu banco, escolher Pix,
+      colar o código e confirmar o pagamento.
+    </p>
+  </section>
+
+  <div class="footer">Obrigado por fazer parte desse momento com a gente. ❤️</div>
+</main>
+
+<script>
+/*
+  ============================
+  CONFIGURAÇÃO DOS NOIVOS
+  ============================
+  Altere somente estes 4 campos.
+*/
+const CONFIG = {
+  pixKey: "SUA-CHAVE-PIX-AQUI",
+  merchantName: "JOAO E NOIVA",
+  merchantCity: "PINDAMONHABA",
+  txid: "CASAMENTO2026"
+};
+
+function onlyAscii(str){
+  return str.normalize("NFD")
+    .replace(/[\u0300-\u036f]/g,"")
+    .replace(/[^A-Za-z0-9 ]/g,"")
+    .toUpperCase();
+}
+
+function tlv(id, value){
+  const len = String(value.length).padStart(2,"0");
+  return id + len + value;
+}
+
+function crc16ccitt(payload){
+  let crc = 0xFFFF;
+  for(let i=0;i<payload.length;i++){
+    crc ^= payload.charCodeAt(i) << 8;
+    for(let j=0;j<8;j++){
+      if(crc & 0x8000){
+        crc = ((crc << 1) ^ 0x1021) & 0xFFFF;
+      }else{
+        crc = (crc << 1) & 0xFFFF;
+      }
+    }
+  }
+  return crc.toString(16).toUpperCase().padStart(4,"0");
+}
+
+function parseValor(raw){
+  let s = String(raw).trim().replace(/\s/g,"");
+  if(!s) return NaN;
+
+  // Aceita 150,50 | 150.50 | 1.250,50 | 1250.50
+  if(s.includes(",") && s.includes(".")){
+    s = s.replace(/\./g,"").replace(",",".");
+  }else if(s.includes(",")){
+    s = s.replace(",",".");
+  }
+
+  const n = Number(s);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+function gerarPix(valor){
+  const chave = String(CONFIG.pixKey).trim();
+  const nome = onlyAscii(CONFIG.merchantName).slice(0,25);
+  const cidade = onlyAscii(CONFIG.merchantCity).slice(0,15);
+  const txid = onlyAscii(CONFIG.txid).replace(/ /g,"").slice(0,25) || "***";
+
+  const merchantAccount =
+    tlv("00","BR.GOV.BCB.PIX") +
+    tlv("01",chave);
+
+  let payload =
+    tlv("00","01") +
+    tlv("26",merchantAccount) +
+    tlv("52","0000") +
+    tlv("53","986") +
+    tlv("54",valor.toFixed(2)) +
+    tlv("58","BR") +
+    tlv("59",nome) +
+    tlv("60",cidade) +
+    tlv("62",tlv("05",txid));
+
+  payload += "6304";
+  payload += crc16ccitt(payload);
+
+  return payload;
+}
+
+const input = document.getElementById("valor");
+const gerar = document.getElementById("gerar");
+const resultado = document.getElementById("resultado");
+const pix = document.getElementById("pix");
+const valorFinal = document.getElementById("valorFinal");
+const copiar = document.getElementById("copiar");
+const sucesso = document.getElementById("sucesso");
+
+gerar.addEventListener("click", ()=>{
+  const valor = parseValor(input.value);
+
+  if(!Number.isFinite(valor) || valor <= 0){
+    alert("Digite um valor válido.");
+    input.focus();
+    return;
+  }
+
+  if(valor > 999999.99){
+    alert("Digite um valor de até R$ 999.999,99.");
+    input.focus();
+    return;
+  }
+
+  if(CONFIG.pixKey === "SUA-CHAVE-PIX-AQUI"){
+    alert("Antes de publicar, coloque a chave Pix dos noivos no campo CONFIG.pixKey do arquivo.");
+    return;
+  }
+
+  const codigo = gerarPix(valor);
+  pix.value = codigo;
+  valorFinal.textContent = valor.toLocaleString("pt-BR",{
+    style:"currency",
+    currency:"BRL"
+  });
+  resultado.style.display = "block";
+  sucesso.style.display = "none";
+  resultado.scrollIntoView({behavior:"smooth", block:"start"});
+});
+
+copiar.addEventListener("click", async ()=>{
+  try{
+    await navigator.clipboard.writeText(pix.value);
+  }catch(e){
+    pix.select();
+    document.execCommand("copy");
+  }
+  sucesso.style.display = "block";
+  copiar.textContent = "Pix Copiado ✓";
+  setTimeout(()=> copiar.textContent = "Copiar Pix Copia e Cola",1800);
+});
+
+input.addEventListener("keydown", e=>{
+  if(e.key === "Enter") gerar.click();
+});
+</script>
+</body>
+</html>
